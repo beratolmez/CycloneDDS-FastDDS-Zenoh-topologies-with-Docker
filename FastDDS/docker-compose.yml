@@ -1,0 +1,336 @@
+version: '3.8'
+
+services:
+  discovery_server_istanbul:
+    build:
+      context: .
+      dockerfile: Dockerfile_fastdds_discovery
+    container_name: discovery_server_istanbul
+    networks:
+      istanbul_net:  # Mevcut macvlan ağı
+      common_net:
+        ipv4_address: 172.30.0.11
+    environment:
+      - FASTDDS_SERVER_ID=0
+      - FASTDDS_SERVER_PORT=11811
+    ports:
+      - "11811:11811"
+    volumes:
+      - ./fastdds-discovery-istanbul.xml:/config/fastdds-discovery.xml:ro
+      - ./scripts/start_discovery_server.sh:/start_discovery_server.sh:ro
+    command: ["/start_discovery_server.sh"]
+
+  # FastDDS Discovery Server - Ankara
+  discovery_server_ankara:
+    build:
+      context: .
+      dockerfile: Dockerfile_fastdds_discovery
+    container_name: discovery_server_ankara
+    networks:
+      ankara_net: # Mevcut macvlan ağı
+      common_net:
+        ipv4_address: 172.30.0.12
+    environment:
+      - FASTDDS_SERVER_ID=1
+      - FASTDDS_SERVER_PORT=11812
+    ports:
+      - "11812:11812"
+    volumes:
+      - ./fastdds-discovery-ankara.xml:/config/fastdds-discovery.xml:ro
+      - ./scripts/start_discovery_server.sh:/start_discovery_server.sh:ro
+    command: ["/start_discovery_server.sh"]
+
+  # FastDDS Discovery Server - İzmir
+  discovery_server_izmir:
+    build:
+      context: .
+      dockerfile: Dockerfile_fastdds_discovery
+    container_name: discovery_server_izmir
+    networks:
+      izmir_net: # Mevcut macvlan ağı
+      common_net:
+        ipv4_address: 172.30.0.13
+    environment:
+      - FASTDDS_SERVER_ID=2
+      - FASTDDS_SERVER_PORT=11813
+    ports:
+      - "11813:11813"
+    volumes:
+      - ./fastdds-discovery-izmir.xml:/config/fastdds-discovery.xml:ro
+      - ./scripts/start_discovery_server.sh:/start_discovery_server.sh:ro
+    command: ["/start_discovery_server.sh"]
+
+  # İstanbul ROS2 Düğümleri - FastDDS
+  ist_talker_1:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ist_talker_1
+    depends_on: 
+      - discovery_server_istanbul
+    networks: 
+      - istanbul_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-istanbul.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-istanbul.xml:/config/fastdds-client-istanbul.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_istanbul_1"]
+
+  ist_talker_2:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ist_talker_2
+    depends_on: 
+      - discovery_server_istanbul
+    networks: 
+      - istanbul_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-istanbul.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-istanbul.xml:/config/fastdds-client-istanbul.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_istanbul_2"]
+
+  ist_listener_1:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ist_listener_1
+    depends_on: 
+      - discovery_server_istanbul
+    networks: 
+      - istanbul_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-istanbul.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-istanbul.xml:/config/fastdds-client-istanbul.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "listener", "--ros-args", "-r", "__node:=listener_istanbul_1"]
+
+  # Ankara ROS2 Düğümleri - FastDDS
+  ankr_talker_1:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ankr_talker_1
+    depends_on: 
+      - discovery_server_ankara
+    networks: 
+      - ankara_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-ankara.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-ankara.xml:/config/fastdds-client-ankara.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_ankara_1"]
+
+  ankr_talker_2:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ankr_talker_2
+    depends_on: 
+      - discovery_server_ankara
+    networks: 
+      - ankara_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-ankara.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-ankara.xml:/config/fastdds-client-ankara.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_ankara_2"]
+
+  ankr_listener_1:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ankr_listener_1
+    depends_on: 
+      - discovery_server_ankara
+    networks: 
+      - ankara_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-ankara.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-ankara.xml:/config/fastdds-client-ankara.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "listener", "--ros-args", "-r", "__node:=listener_ankara_1"]
+
+  # İzmir ROS2 Düğümleri - FastDDS
+  izm_talker_1:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: izm_talker_1
+    depends_on: 
+      - discovery_server_izmir
+    networks: 
+      - izmir_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-izmir.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-izmir.xml:/config/fastdds-client-izmir.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_izmir_1"]
+
+  izm_talker_2:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: izm_talker_2
+    depends_on: 
+      - discovery_server_izmir
+    networks: 
+      - izmir_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-izmir.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-izmir.xml:/config/fastdds-client-izmir.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_izmir_2"]
+
+  izm_listener_1:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: izm_listener_1
+    depends_on: 
+      - discovery_server_izmir
+    networks: 
+      - izmir_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-izmir.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-izmir.xml:/config/fastdds-client-izmir.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "listener", "--ros-args", "-r", "__node:=listener_izmir_1"]
+
+  # Monitoring ve Debug için Terminal Erişimi
+  ist_terminal:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ist_terminal
+    depends_on: 
+      - discovery_server_istanbul
+    networks: 
+      - istanbul_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-istanbul.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-istanbul.xml:/config/fastdds-client-istanbul.xml:ro
+    stdin_open: true
+    tty: true
+    command: ["sleep", "infinity"]
+
+  ankr_terminal:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ankr_terminal
+    depends_on: 
+      - discovery_server_ankara
+    networks: 
+      - ankara_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-ankara.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-ankara.xml:/config/fastdds-client-ankara.xml:ro
+    stdin_open: true
+    tty: true
+    command: ["sleep", "infinity"]
+
+  izm_terminal:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: izm_terminal
+    depends_on: 
+      - discovery_server_izmir
+    networks: 
+      - izmir_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-izmir.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-izmir.xml:/config/fastdds-client-izmir.xml:ro
+    stdin_open: true
+    tty: true
+    command: ["sleep", "infinity"]
+    
+  attacker_machine:
+    build:
+      context: .
+      dockerfile: Dockerfile_attacker  # Yukarıda düzenlenen Dockerfile'ın adı
+    container_name: attacker_machine
+    networks:
+      - istanbul_net # ARP spoofing gibi LAN saldırıları için macvlan ağına dahil edildi
+      - common_net   # Discovery Server trafiğini izlemek için bridge ağına dahil edildi
+    stdin_open: true # Konteynere interaktif erişim için
+    tty: true        # Konteynere interaktif erişim için
+    cap_add:
+      - NET_ADMIN    # Ağ ayarlarını değiştirme yetkisi (örn: IP yönlendirme)
+      - NET_RAW      # Ham soket oluşturma yetkisi (Scapy ve arpspoof için gerekli)
+    command: ["/bin/bash"] # Konteyner başladığında bash kabuğu başlat
+
+networks:
+  istanbul_net:
+    driver: macvlan
+    driver_opts:
+      parent: eth0.40
+    ipam:
+      config:
+        - subnet: 192.168.111.0/24
+          gateway: 192.168.111.1
+
+  ankara_net:
+    driver: macvlan
+    driver_opts:
+      parent: eth0.50
+    ipam:
+      config:
+        - subnet: 192.168.112.0/24
+          gateway: 192.168.112.1
+
+  izmir_net:
+    driver: macvlan
+    driver_opts:
+      parent: eth0.60
+    ipam:
+      config:
+        - subnet: 192.168.113.0/24
+          gateway: 192.168.113.1
+
+  common_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+          gateway: 172.30.0.1

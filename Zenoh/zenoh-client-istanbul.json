@@ -1,0 +1,10 @@
+{
+  "mode": "client",
+  "connect": {
+    "endpoints": ["tcp/router_istanbul:7447"]
+  },
+  "timestamping": {
+    "enabled": true,
+    "drop_future_timestamp": false
+  }
+}

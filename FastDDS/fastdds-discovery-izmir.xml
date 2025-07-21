@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+    
+    <!-- İzmir Discovery Server Profili -->
+    <participant profile_name="izmir_server_profile" is_default_profile="true">
+        <rtps>
+            <!-- Server ID -->
+            <participantID>2</participantID>
+            
+            <!-- Built-in Discovery Protocol ayarları -->
+            <builtin>
+                <discovery_config>
+                    <discoveryProtocol>SERVER</discoveryProtocol>
+                                    
+                <!-- Discovery lease duration -->
+                <leaseDuration>
+                    <sec>30</sec>
+                    <nanosec>0</nanosec>
+                </leaseDuration>
+                
+                <!-- Discovery announcement period -->
+                <leaseAnnouncement>
+                    <sec>10</sec>
+                    <nanosec>0</nanosec>
+                </leaseAnnouncement>
+                </discovery_config>
+            </builtin>
+            
+            <!-- Listen on all interfaces -->
+            <defaultUnicastLocatorList>
+                <locator>
+                    <udpv4>
+                        <address>0.0.0.0</address>
+                        <port>11813</port>
+                    </udpv4>
+                </locator>
+            </defaultUnicastLocatorList>
+        </rtps>
+    </participant>
+    
+</profiles>

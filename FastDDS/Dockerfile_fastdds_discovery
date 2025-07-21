@@ -1,0 +1,41 @@
+FROM ros:humble-ros-base-jammy
+
+# FastDDS ve Discovery Server araçlarını yükle
+RUN apt-get update && apt-get install -y \
+    libfastrtps-dev \
+    fastdds-tools \
+    ros-humble-demo-nodes-cpp \
+    ros-humble-rmw-fastrtps-cpp \
+    net-tools \
+    iputils-ping \
+    iproute2 \
+    curl \
+    wget \
+    vim \
+    build-essential \
+    cmake \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# ROS2 ortamını yükle
+RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+
+# Çalışma dizinini ayarla
+WORKDIR /discovery_server
+
+# Konfigürasyon dizinini oluştur
+RUN mkdir -p /config
+
+# Discovery Server için script dizinini oluştur
+RUN mkdir -p /scripts
+
+# Port ve server ID için environment variables
+ENV FASTDDS_SERVER_ID=0
+ENV FASTDDS_SERVER_PORT=11811
+
+# Entry point
+COPY docker-entrypoint-discovery.sh /
+RUN chmod +x /docker-entrypoint-discovery.sh
+
+ENTRYPOINT ["/docker-entrypoint-discovery.sh"]
+CMD ["bash"]

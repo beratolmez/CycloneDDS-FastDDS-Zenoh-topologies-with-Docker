@@ -1,0 +1,43 @@
+FROM ros:humble-ros-base-jammy
+
+# FastDDS ve gerekli paketleri yükle
+RUN apt-get update && apt-get install -y \
+    ros-humble-rmw-fastrtps-cpp \
+    ros-humble-demo-nodes-cpp \
+    ros-humble-demo-nodes-py \
+    ros-humble-rqt* \
+    ros-humble-ros2bag \
+    ros-humble-rosbag2* \
+    python3-pip \
+    net-tools \
+    iputils-ping \
+    iproute2 \
+    curl \
+    wget \
+    vim \
+    htop \
+    && rm -rf /var/lib/apt/lists/*
+
+# FastDDS araçlarını yükle
+RUN apt-get update && apt-get install -y \
+    libfastrtps-dev \
+    fastdds-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+# ROS2 ortamını yükle
+RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+
+# Çalışma dizinini ayarla
+WORKDIR /ros2_ws
+
+# Konfigürasyon dizinini oluştur
+RUN mkdir -p /config
+
+# FastDDS default RMW olarak ayarla
+ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+
+# Entry point
+COPY docker-entrypoint.sh /
+RUN chmod +x /docker-entrypoint.sh
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["bash"]

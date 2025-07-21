@@ -1,0 +1,29 @@
+# Mevcut ROS2 imajı ve temel ayarlar...
+FROM osrf/ros:humble-desktop
+
+# 1) Temel ROS2 kurulumu (örneğinizde burada başka paketler olabilir)
+RUN apt-get update && \
+    apt-get install -y ros-humble-rmw-zenoh-cpp \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2) DEMO NODES paketlerini ekleyin
+RUN apt-get update && \
+    apt-get install -y \
+      ros-humble-demo-nodes-cpp \
+      ros-humble-demo-nodes-py \
+    && rm -rf /var/lib/apt/lists/*
+
+# 3) IP Paketleri Kurulumu
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      iproute2 \
+      iputils-ping && \
+    rm -rf /var/lib/apt/lists/*
+
+# 4) Ortam değişkenleri ve entrypoint ayarları
+RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
+ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
+COPY ros2_entrypoint.sh /ros2_entrypoint.sh
+RUN chmod +x /ros2_entrypoint.sh
+ENTRYPOINT ["/ros2_entrypoint.sh"]
+CMD ["bash"]

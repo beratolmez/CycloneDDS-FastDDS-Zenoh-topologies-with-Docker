@@ -1,0 +1,215 @@
+services:
+  # Zenoh Router Hizmetleri
+  router_istanbul:
+    image: eclipse/zenoh:latest
+    container_name: router_istanbul
+    networks:
+      - istanbul_net
+      - common_net
+    volumes:
+      - ./zenoh-router-istanbul.yaml:/config/zenoh-router.yaml:ro
+    command: ["--config", "/config/zenoh-router.yaml"]
+
+  router_ankara:
+    image: eclipse/zenoh:latest
+    container_name: router_ankara
+    networks:
+      - ankara_net
+      - common_net
+    volumes:
+      - ./zenoh-router-ankara.yaml:/config/zenoh-router.yaml:ro
+    command: ["--config", "/config/zenoh-router.yaml"]
+
+  router_izmir:
+    image: eclipse/zenoh:latest
+    container_name: router_izmir
+    networks:
+      - izmir_net
+      - common_net
+    volumes:
+      - ./zenoh-router-izmir.yaml:/config/zenoh-router.yaml:ro
+    command: ["--config", "/config/zenoh-router.yaml"]
+
+  # İstanbul ROS2 Düğümleri
+  ist_talker_1:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2
+    container_name: ist_talker_1
+    depends_on: [router_istanbul]
+    networks: [istanbul_net]
+    environment:
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+      - ZENOH_SESSION_CONFIG_URI=/config/zenoh-client-istanbul.json
+    volumes:
+      - ./zenoh-client-istanbul.json:/config/zenoh-client-istanbul.json:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_istanbul_1"]
+
+  ist_talker_2:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2
+    container_name: ist_talker_2
+    depends_on: [router_istanbul]
+    networks: [istanbul_net]
+    environment:
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+      - ZENOH_SESSION_CONFIG_URI=/config/zenoh-client-istanbul.json
+    volumes:
+      - ./zenoh-client-istanbul.json:/config/zenoh-client-istanbul.json:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_istanbul_2"]
+    
+  listener_istanbul:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2
+    container_name: listener_istanbul
+    depends_on: [router_istanbul]
+    networks: [istanbul_net]
+    environment:
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+      - ZENOH_SESSION_CONFIG_URI=/config/zenoh-client-istanbul.json
+    volumes:
+      - ./zenoh-client-istanbul.json:/config/zenoh-client-istanbul.json:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "listener", "--ros-args", "-r", "__node:=listener_istanbul"]
+
+  # Ankara ROS2 Düğümleri
+  ankr_talker_1:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2
+    container_name: ankr_talker_1
+    depends_on: [router_ankara]
+    networks: [ankara_net]
+    environment:
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+      - ZENOH_SESSION_CONFIG_URI=/config/zenoh-client-ankara.json
+    volumes:
+      - ./zenoh-client-ankara.json:/config/zenoh-client-ankara.json:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_ankara_1"]
+
+  ankr_talker_2:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2
+    container_name: ankr_talker_2
+    depends_on: [router_ankara]
+    networks: [ankara_net]
+    environment:
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+      - ZENOH_SESSION_CONFIG_URI=/config/zenoh-client-ankara.json
+    volumes:
+      - ./zenoh-client-ankara.json:/config/zenoh-client-ankara.json:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_ankara_2"]
+
+  listener_ankara:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2
+    container_name: listener_ankara
+    depends_on: [router_ankara]
+    networks: [ankara_net]
+    environment:
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+      - ZENOH_SESSION_CONFIG_URI=/config/zenoh-client-ankara.json
+    volumes:
+      - ./zenoh-client-ankara.json:/config/zenoh-client-ankara.json:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "listener", "--ros-args", "-r", "__node:=listener_ankara"]
+
+  # İzmir ROS2 Düğümleri
+  izm_talker_1:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2
+    container_name: izm_talker_1
+    depends_on: [router_izmir]
+    networks: [izmir_net]
+    environment:
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+      - ZENOH_SESSION_CONFIG_URI=/config/zenoh-client-izmir.json
+    volumes:
+      - ./zenoh-client-izmir.json:/config/zenoh-client-izmir.json:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_izmir_1"]
+
+  izm_talker_2:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2
+    container_name: izm_talker_2
+    depends_on: [router_izmir]
+    networks: [izmir_net]
+    environment:
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+      - ZENOH_SESSION_CONFIG_URI=/config/zenoh-client-izmir.json
+    volumes:
+      - ./zenoh-client-izmir.json:/config/zenoh-client-izmir.json:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_izmir_2"]
+    
+    # docker-compose.yml dosyasının sonuna ekleyin
+  listener_izmir:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2
+    container_name: listener_izmir
+    depends_on: [router_izmir]
+    networks: [izmir_net]
+    environment:
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+      - ZENOH_SESSION_CONFIG_URI=/config/zenoh-client-izmir.json
+    volumes:
+      - ./zenoh-client-izmir.json:/config/zenoh-client-izmir.json:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "listener", "--ros-args", "-r", "__node:=listener_izmir"]
+    
+  attacker:
+    build:
+      context: .
+      dockerfile: Dockerfile_attacker
+    container_name: attacker
+    # Mutlaka privileged modda çalıştıracağız (raw paketi, arp spoof, flood vs. için)
+    privileged: true
+    networks:
+      - istanbul_net
+      - ankara_net
+      - izmir_net
+      - common_net
+    # Salt-okunur mount kaldırıldı, böylece betikler ve çıktı dosyaları yazılabilir
+    volumes:
+      - ./attacker-scripts:/home/ros/attacker-scripts
+    environment:
+      - TZ=Europe/Istanbul
+    command: ["bash", "-c", "cd /home/ros/attacker-scripts && bash setup.sh && bash run_all_tests.sh"]
+
+networks:
+  istanbul_net:
+    driver: macvlan
+    driver_opts:
+      parent: eth0.10
+    ipam:
+      config:
+        - subnet: 192.168.111.0/24
+          gateway: 192.168.111.1
+
+  ankara_net:
+    driver: macvlan
+    driver_opts:
+      parent: eth0.20
+    ipam:
+      config:
+        - subnet: 192.168.112.0/24
+          gateway: 192.168.112.1
+
+  izmir_net:
+    driver: macvlan
+    driver_opts:
+      parent: eth0.30
+    ipam:
+      config:
+        - subnet: 192.168.113.0/24
+          gateway: 192.168.113.1
+
+  common_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+          gateway: 172.30.0.1

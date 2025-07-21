@@ -1,0 +1,45 @@
+# Dockerfile_attacker
+# -------------------------------------------------------------------
+#  Ubuntu Jammy (22.04) Tabanlı: ROS 2 + FastDDS + Pentest Araçları
+# -------------------------------------------------------------------
+FROM ros:humble-ros-base-jammy
+
+LABEL maintainer="senin_adresin@example.com"
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Europe/Istanbul
+
+# 1) Sistem saat dilimini ayarla ve temel paketleri/araçları yükle
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Temel Ağ Araçları
+    curl wget gnupg2 lsb-release net-tools iputils-ping iproute2 vim htop sudo git \
+    # ROS 2 Demo Düğümleri ve FastDDS
+    ros-humble-rmw-fastrtps-cpp \
+    ros-humble-demo-nodes-cpp \
+    ros-humble-demo-nodes-py \
+    # Pentest Araçları
+    nmap tcpdump tshark arp-scan dsniff ettercap-text-only \
+    # Python ve Derleme
+    python3-pip python3-setuptools \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 2) Python kütüphanelerini (Scapy + ROS 2 derleme araçları) kuralım
+RUN pip3 install --no-cache-dir \
+    scapy \
+    colcon-common-extensions \
+    empy \
+    pandas
+
+# 3) /home/ros kullanıcısını oluştur ve sudo yetkisi ver
+RUN useradd -m -s /bin/bash ros && \
+    echo "ros:ros" | chpasswd && \
+    adduser ros sudo
+
+USER ros
+WORKDIR /home/ros
+
+# 4) ROS ortamını bashrc'ye ekle
+RUN echo "source /opt/ros/humble/setup.bash" >> /home/ros/.bashrc
+
+# 5) Başlangıçta bash kabuğunu çalıştır
+CMD ["/bin/bash"]

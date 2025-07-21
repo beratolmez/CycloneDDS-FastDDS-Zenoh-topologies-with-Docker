@@ -1,0 +1,45 @@
+--- Nmap ile Ağ Taraması ---
+[*] İstanbul Ağı (192.168.111.0/24) taranıyor...
+Starting Nmap 7.80 ( https://nmap.org ) at 2025-06-10 19:55 +03
+Nmap scan report for router_istanbul.zenoh_istanbul_net (192.168.111.3)
+Host is up (0.000023s latency).
+MAC Address: 9A:8E:36:53:63:7E (Unknown)
+Nmap scan report for ist_talker_2.zenoh_istanbul_net (192.168.111.4)
+Host is up (0.000014s latency).
+MAC Address: 7E:0E:DB:E5:EC:CC (Unknown)
+Nmap scan report for ist_talker_1.zenoh_istanbul_net (192.168.111.5)
+Host is up (0.000029s latency).
+MAC Address: FE:73:2B:9F:A2:F7 (Unknown)
+Nmap scan report for 2980201b70dc (192.168.111.2)
+Host is up.
+Nmap done: 256 IP addresses (4 hosts up) scanned in 2.03 seconds
+
+[*] Ankara Ağı (192.168.112.0/24) taranıyor...
+Starting Nmap 7.80 ( https://nmap.org ) at 2025-06-10 19:55 +03
+Nmap scan report for router_ankara.zenoh_ankara_net (192.168.112.3)
+Host is up (0.000028s latency).
+MAC Address: 1E:7B:E6:7A:D0:B6 (Unknown)
+Nmap scan report for ankr_talker_1.zenoh_ankara_net (192.168.112.4)
+Host is up (0.000014s latency).
+MAC Address: 7E:BD:B5:97:53:8C (Unknown)
+Nmap scan report for ankr_talker_2.zenoh_ankara_net (192.168.112.5)
+Host is up (0.000025s latency).
+MAC Address: 82:04:D7:10:F9:DE (Unknown)
+Nmap scan report for 2980201b70dc (192.168.112.2)
+Host is up.
+Nmap done: 256 IP addresses (4 hosts up) scanned in 2.10 seconds
+
+[*] İzmir Ağı (192.168.113.0/24) taranıyor...
+Starting Nmap 7.80 ( https://nmap.org ) at 2025-06-10 19:55 +03
+Nmap scan report for router_izmir.zenoh_izmir_net (192.168.113.2)
+Host is up (0.00022s latency).
+MAC Address: 52:B6:5C:92:BA:07 (Unknown)
+Nmap scan report for izm_talker_1.zenoh_izmir_net (192.168.113.4)
+Host is up (0.000039s latency).
+MAC Address: 8A:77:01:9C:70:F2 (Unknown)
+Nmap scan report for izm_talker_2.zenoh_izmir_net (192.168.113.5)
+Host is up (0.000031s latency).
+MAC Address: 36:29:AD:05:9C:1E (Unknown)
+Nmap scan report for 2980201b70dc (192.168.113.3)
+Host is up.
+Nmap done: 256 IP addresses (4 hosts up) scanned in 2.08 seconds

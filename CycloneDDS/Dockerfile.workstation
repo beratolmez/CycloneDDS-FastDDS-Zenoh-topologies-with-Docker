@@ -1,0 +1,35 @@
+# ---------------------------------------------------------------------------------
+# Workstation (HMI) – Sadece SSH ve Temel Linux Araçları (ROS2 CLI istemiyoruz)
+# ---------------------------------------------------------------------------------
+
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Europe/Istanbul
+
+# 1) Temel paketleri yükle
+RUN apt-get update && \
+    apt-get install -y \
+      openssh-server \
+      sudo \
+      net-tools \
+      iputils-ping \
+      vim \
+      curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# 2) SSH yapılandırması
+RUN mkdir /var/run/sshd
+
+# 3) 'user1' kullanıcısını oluştur, zayıf parola ata
+RUN useradd -m -s /bin/bash user1 && \
+    echo 'user1:password123' | chpasswd && \
+    adduser user1 sudo
+
+# 4) Root SSH erişimini kapat, parola kimlik doğrulamasını açık tut
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config && \
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+# 5) SSH servisini foreground modda çalıştır
+CMD ["/usr/sbin/sshd", "-D"]
+

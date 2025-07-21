@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+   
+    <!-- İstanbul Client Profili -->
+    <participant profile_name="istanbul_client_profile" is_default_profile="true">
+        <rtps>
+            <!-- Participant ID -->
+            <participantID>1</participantID>
+           
+            <!-- Built-in Discovery Protocol ayarları -->
+            <builtin>
+                <discovery_config>
+                    <discoveryProtocol>CLIENT</discoveryProtocol>
+                    <discoveryServersList>
+                        <RemoteServer prefix="44.53.00.5f.45.50.52.4f.53.49.4d.41">
+                            <metatrafficUnicastLocatorList>
+                                <locator>
+                                    <udpv4>
+                                        <address>172.30.0.11</address> <port>11811</port>
+                                    </udpv4>
+                                </locator>
+                            </metatrafficUnicastLocatorList>
+                        </RemoteServer>
+                       
+                        <RemoteServer prefix="44.53.01.5f.45.50.52.4f.53.49.4d.41">
+                            <metatrafficUnicastLocatorList>
+                                <locator>
+                                    <udpv4>
+                                        <address>172.30.0.12</address> <port>11812</port>
+                                    </udpv4>
+                                </locator>
+                            </metatrafficUnicastLocatorList>
+                        </RemoteServer>
+                       
+                        <RemoteServer prefix="44.53.02.5f.45.50.52.4f.53.49.4d.41">
+                            <metatrafficUnicastLocatorList>
+                                <locator>
+                                    <udpv4>
+                                        <address>172.30.0.13</address> <port>11813</port>
+                                    </udpv4>
+                                </locator>
+                            </metatrafficUnicastLocatorList>
+                        </RemoteServer>
+                    </discoveryServersList>
+                <!-- Discovery lease duration -->
+                <leaseDuration>
+                    <sec>30</sec>
+                    <nanosec>0</nanosec>
+                </leaseDuration>
+               
+                <!-- Discovery announcement period -->
+                <leaseAnnouncement>
+                    <sec>10</sec>
+                    <nanosec>0</nanosec>
+                </leaseAnnouncement>
+                </discovery_config>
+            </builtin>
+           
+            <!-- Use builtin transports -->
+            <useBuiltinTransports>true</useBuiltinTransports>
+        </rtps>
+            <!-- Properties -->
+            <properties>
+                <property>
+                    <name>fastdds.application.id</name>
+                    <value>ISTANBUL_CLIENT</value>
+                </property>
+                <property>
+                    <name>fastdds.application.metadata</name>
+                    <value>Istanbul subnet client</value>
+                </property>
+            </properties>
+    </participant>
+
+</profiles>
+

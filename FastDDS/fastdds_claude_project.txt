@@ -1,0 +1,1073 @@
+# scripts/start-discovery-server.sh
+#!/bin/bash
+set -e
+
+# ROS2 ortamını yükle
+source /opt/ros/humble/setup.bash
+
+echo "Starting FastDDS Discovery Server..."
+echo "Server ID: $FASTDDS_SERVER_ID"
+echo "Server Port: $FASTDDS_SERVER_PORT"
+
+# Konfigürasyon dosyası varsa kullan
+CONFIG_ARG=""
+if [ -f "/config/fastdds-discovery.xml" ]; then
+    echo "Using configuration file: /config/fastdds-discovery.xml"
+    # -x parametresi ile XML dosyasını belirtin
+    CONFIG_ARG="-x /config/fastdds-discovery.xml"
+fi
+
+# RMW_IMPLEMENTATION ayarla (Discovery server için de gerekebilir)
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+
+echo "Executing: fast-discovery-server -i $FASTDDS_SERVER_ID -p $FASTDDS_SERVER_PORT $CONFIG_ARG"
+
+# FastDDS Discovery Server'ı başlat
+# Ortam değişkenlerinin doğru şekilde kullanıldığından emin olun
+exec fast-discovery-server -i $FASTDDS_SERVER_ID -p $FASTDDS_SERVER_PORT $CONFIG_ARG
+
+
+# test-fastdds-setup.sh
+#!/bin/bash
+
+echo "FastDDS Deney Düzeneği Test Script'i"
+echo "===================================="
+
+# Docker Compose dosyasının varlığını kontrol et
+if [ ! -f "docker-compose.yml" ]; then
+    echo "Hata: docker-compose.yml dosyası bulunamadı!"
+    exit 1
+fi
+
+# Gerekli dosyaların varlığını kontrol et
+echo "Gerekli dosyalar kontrol ediliyor..."
+
+required_files=(
+    "Dockerfile_ros2_fastdds"
+    "Dockerfile_fastdds_discovery"
+    "docker-entrypoint.sh"
+    "docker-entrypoint-discovery.sh"
+    "scripts/start_discovery_server.sh"
+    "fastdds-client-istanbul.xml"
+    "fastdds-client-ankara.xml"
+    "fastdds-client-izmir.xml"
+    "fastdds-discovery-istanbul.xml"
+    "fastdds-discovery-ankara.xml"
+    "fastdds-discovery-izmir.xml"
+)
+
+missing_files=()
+for file in "${required_files[@]}"; do
+    if [ ! -f "$file" ]; then
+        missing_files+=("$file")
+    fi
+done
+
+if [ ${#missing_files[@]} -ne 0 ]; then
+    echo "Eksik dosyalar:"
+    for file in "${missing_files[@]}"; do
+        echo "  - $file"
+    done
+    echo "Lütfen eksik dosyaları oluşturun."
+    exit 1
+fi
+
+echo "Tüm gerekli dosyalar mevcut."
+
+# Scripts dizinini oluştur
+mkdir -p scripts
+
+# Docker Compose ile sistemi başlat
+echo "Docker Compose ile sistem başlatılıyor..."
+docker-compose up -d
+
+# Servislerin çalışmasını bekle
+echo "Servislerin başlaması bekleniyor (30 saniye)..."
+sleep 30
+
+# Discovery Server'ların durumunu kontrol et
+echo "Discovery Server'ların durumu:"
+echo "=============================="
+docker-compose ps | grep discovery_server
+
+# Container'ların ağ durumunu kontrol et
+echo ""
+echo "Container Network Bilgileri:"
+echo "============================"
+
+echo "İstanbul Network:"
+docker exec ist_talker_1 ip addr show 2>/dev/null | grep inet || echo "İstanbul container'ı bulunamadı"
+
+echo "Ankara Network:"
+docker exec ankr_talker_1 ip addr show 2>/dev/null | grep inet || echo "Ankara container'ı bulunamadı"
+
+echo "İzmir Network:"
+docker exec izm_talker_1 ip addr show 2>/dev/null | grep inet || echo "İzmir container'ı bulunamadı"
+
+# ROS2 node'ların durumunu kontrol et
+echo ""
+echo "ROS2 Node Durumu Test Ediliyor:"
+echo "==============================="
+
+# İstanbul terminal'den diğer node'ları görebiliyor mu?
+echo "İstanbul'dan ROS2 node listesi:"
+docker exec ist_terminal timeout 10s ros2 node list 2>/dev/null || echo "ROS2 node listesi alınamadı"
+
+echo ""
+echo "Ankara'dan ROS2 node listesi:"
+docker exec ankr_terminal timeout 10s ros2 node list 2>/dev/null || echo "ROS2 node listesi alınamadı"
+
+echo ""
+echo "İzmir'den ROS2 node listesi:"
+docker exec izm_terminal timeout 10s ros2 node list 2>/dev/null || echo "ROS2 node listesi alınamadı"
+
+# Topic listesini kontrol et
+echo ""
+echo "Aktif ROS2 Topic'ler:"
+echo "===================="
+docker exec ist_terminal timeout 10s ros2 topic list 2>/dev/null || echo "Topic listesi alınamadı"
+
+# Discovery Server loglarını kontrol et
+echo ""
+echo "Discovery Server Logları:"
+echo "========================"
+echo "İstanbul Discovery Server:"
+docker logs discovery_server_istanbul --tail 10 2>/dev/null || echo "İstanbul discovery server logları alınamadı"
+
+echo ""
+echo "Ankara Discovery Server:"
+docker logs discovery_server_ankara --tail 10 2>/dev/null || echo "Ankara discovery server logları alınamadı"
+
+echo ""
+echo "İzmir Discovery Server:"
+docker logs discovery_server_izmir --tail 10 2>/dev/null || echo "İzmir discovery server logları alınamadı"
+
+# Inter-subnet iletişim testi
+echo ""
+echo "Inter-Subnet İletişim Testi:"
+echo "============================"
+echo "Test süresi: 10 saniye"
+
+# Arka planda listener başlat
+docker exec -d ankr_listener_1 timeout 15s ros2 topic echo /chatter --once 2>/dev/null
+
+# Bir mesaj gönder
+docker exec ist_talker_1 timeout 5s ros2 topic pub --once /chatter std_msgs/String "data: 'Test mesajı Istanbul->Ankara'" 2>/dev/null && echo "Test mesajı gönderildi" || echo "Test mesajı gönderilemedi"
+
+sleep 3
+
+# Manuel test talimatları
+echo ""
+echo "Manuel Test Talimatları:"
+echo "======================="
+echo "1. Terminal erişimi için:"
+echo "   docker exec -it ist_terminal bash"
+echo "   docker exec -it ankr_terminal bash"
+echo "   docker exec -it izm_terminal bash"
+echo ""
+echo "2. Node'ları listelemek için:"
+echo "   ros2 node list"
+echo ""
+echo "3. Topic'leri dinlemek için:"
+echo "   ros2 topic echo /chatter"
+echo ""
+echo "4. Manuel mesaj göndermek için:"
+echo "   ros2 topic pub /chatter std_msgs/String \"data: 'test mesajı'\""
+echo ""
+echo "5. Sistem durumunu görüntülemek için:"
+echo "   docker-compose ps"
+echo ""
+echo "6. Logları görüntülemek için:"
+echo "   docker-compose logs [service_name]"
+echo ""
+echo "7. Sistemi durdurmak için:"
+echo "   docker-compose down"
+
+echo ""
+echo "Test tamamlandı!"
+
+
+# fastdds-discovery-ankara.xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+    
+    <!-- Ankara Discovery Server Profili -->
+    <participant profile_name="ankara_server_profile" is_default_profile="true">
+        <rtps>
+            <!-- Server ID -->
+            <participantID>1</participantID>
+            
+            <!-- Built-in Discovery Protocol ayarları -->
+            <builtin>
+                <discovery_config>
+                    <discoveryProtocol>SERVER</discoveryProtocol>
+                                    
+                <!-- Discovery lease duration -->
+                <leaseDuration>
+                    <sec>30</sec>
+                    <nanosec>0</nanosec>
+                </leaseDuration>
+                
+                <!-- Discovery announcement period -->
+                <leaseAnnouncement>
+                    <sec>10</sec>
+                    <nanosec>0</nanosec>
+                </leaseAnnouncement>
+                </discovery_config>
+
+            </builtin>
+            
+            <!-- Listen on all interfaces -->
+            <defaultUnicastLocatorList>
+                <locator>
+                    <udpv4>
+                        <address>0.0.0.0</address>
+                        <port>11812</port>
+                    </udpv4>
+                </locator>
+            </defaultUnicastLocatorList>
+
+        </rtps>
+    </participant>
+    
+</profiles>
+
+
+# fastdds-discovery-izmir.xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+    
+    <!-- İzmir Discovery Server Profili -->
+    <participant profile_name="izmir_server_profile" is_default_profile="true">
+        <rtps>
+            <!-- Server ID -->
+            <participantID>2</participantID>
+            
+            <!-- Built-in Discovery Protocol ayarları -->
+            <builtin>
+                <discovery_config>
+                    <discoveryProtocol>SERVER</discoveryProtocol>
+                                    
+                <!-- Discovery lease duration -->
+                <leaseDuration>
+                    <sec>30</sec>
+                    <nanosec>0</nanosec>
+                </leaseDuration>
+                
+                <!-- Discovery announcement period -->
+                <leaseAnnouncement>
+                    <sec>10</sec>
+                    <nanosec>0</nanosec>
+                </leaseAnnouncement>
+                </discovery_config>
+            </builtin>
+            
+            <!-- Listen on all interfaces -->
+            <defaultUnicastLocatorList>
+                <locator>
+                    <udpv4>
+                        <address>0.0.0.0</address>
+                        <port>11813</port>
+                    </udpv4>
+                </locator>
+            </defaultUnicastLocatorList>
+        </rtps>
+    </participant>
+    
+</profiles>
+
+
+# fastdds-discovery-istanbul.xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+    
+    <!-- İstanbul Discovery Server Profili -->
+    <participant profile_name="istanbul_server_profile" is_default_profile="true">
+        <rtps>
+            <!-- Server ID -->
+            <participantID>0</participantID>
+            
+            <!-- Built-in Discovery Protocol ayarları -->
+            <builtin>
+                <discovery_config>
+                    <discoveryProtocol>SERVER</discoveryProtocol>
+                                    
+                <!-- Discovery lease duration -->
+                <leaseDuration>
+                    <sec>30</sec>
+                    <nanosec>0</nanosec>
+                </leaseDuration>
+                
+                <!-- Discovery announcement period -->
+                <leaseAnnouncement>
+                    <sec>10</sec>
+                    <nanosec>0</nanosec>
+                </leaseAnnouncement>
+                </discovery_config>
+            </builtin>
+            
+            <!-- Listen on all interfaces -->
+            <defaultUnicastLocatorList>
+                <locator>
+                    <udpv4>
+                        <address>0.0.0.0</address>
+                        <port>11811</port>
+                    </udpv4>
+                </locator>
+            </defaultUnicastLocatorList>
+            
+        </rtps>
+    </participant>
+    
+</profiles>
+
+
+# fastdds-client-izmir.xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+   
+    <!-- İzmir Client Profili -->
+    <participant profile_name="izmir_client_profile" is_default_profile="true">
+        <rtps>
+            <!-- Participant ID -->
+            <participantID>3</participantID>
+           
+            <!-- Built-in Discovery Protocol ayarları -->
+            <builtin>
+                <discovery_config>
+                    <discoveryProtocol>CLIENT</discoveryProtocol>
+              <discoveryServersList>
+                        <RemoteServer prefix="44.53.00.5f.45.50.52.4f.53.49.4d.41">
+                            <metatrafficUnicastLocatorList>
+                                <locator>
+                                    <udpv4>
+                                        <address>172.30.0.11</address> <port>11811</port>
+                                    </udpv4>
+                                </locator>
+                            </metatrafficUnicastLocatorList>
+                        </RemoteServer>
+                       
+                        <RemoteServer prefix="44.53.01.5f.45.50.52.4f.53.49.4d.41">
+                            <metatrafficUnicastLocatorList>
+                                <locator>
+                                    <udpv4>
+                                        <address>172.30.0.12</address> <port>11812</port>
+                                    </udpv4>
+                                </locator>
+                            </metatrafficUnicastLocatorList>
+                        </RemoteServer>
+                       
+                        <RemoteServer prefix="44.53.02.5f.45.50.52.4f.53.49.4d.41">
+                            <metatrafficUnicastLocatorList>
+                                <locator>
+                                    <udpv4>
+                                        <address>172.30.0.13</address> <port>11813</port>
+                                    </udpv4>
+                                </locator>
+                            </metatrafficUnicastLocatorList>
+                        </RemoteServer>
+                    </discoveryServersList>
+                                   
+                <!-- Discovery lease duration -->
+                <leaseDuration>
+                    <sec>30</sec>
+                    <nanosec>0</nanosec>
+                </leaseDuration>
+               
+                <!-- Discovery announcement period -->
+                <leaseAnnouncement>
+                    <sec>10</sec>
+                    <nanosec>0</nanosec>
+                </leaseAnnouncement>
+                </discovery_config>
+            </builtin>
+ 
+           
+            <!-- Use builtin transports -->
+            <useBuiltinTransports>true</useBuiltinTransports>
+        </rtps>
+            <!-- Properties -->
+            <properties>
+                <property>
+                    <name>fastdds.application.id</name>
+                    <value>IZMIR_CLIENT</value>
+                </property>
+                <property>
+                    <name>fastdds.application.metadata</name>
+                    <value>Izmir subnet client</value>
+                </property>
+            </properties>
+    </participant>
+   
+</profiles>
+
+
+# fastdds-client-istanbul.xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+   
+    <!-- İstanbul Client Profili -->
+    <participant profile_name="istanbul_client_profile" is_default_profile="true">
+        <rtps>
+            <!-- Participant ID -->
+            <participantID>1</participantID>
+           
+            <!-- Built-in Discovery Protocol ayarları -->
+            <builtin>
+                <discovery_config>
+                    <discoveryProtocol>CLIENT</discoveryProtocol>
+                    <discoveryServersList>
+                        <RemoteServer prefix="44.53.00.5f.45.50.52.4f.53.49.4d.41">
+                            <metatrafficUnicastLocatorList>
+                                <locator>
+                                    <udpv4>
+                                        <address>172.30.0.11</address> <port>11811</port>
+                                    </udpv4>
+                                </locator>
+                            </metatrafficUnicastLocatorList>
+                        </RemoteServer>
+                       
+                        <RemoteServer prefix="44.53.01.5f.45.50.52.4f.53.49.4d.41">
+                            <metatrafficUnicastLocatorList>
+                                <locator>
+                                    <udpv4>
+                                        <address>172.30.0.12</address> <port>11812</port>
+                                    </udpv4>
+                                </locator>
+                            </metatrafficUnicastLocatorList>
+                        </RemoteServer>
+                       
+                        <RemoteServer prefix="44.53.02.5f.45.50.52.4f.53.49.4d.41">
+                            <metatrafficUnicastLocatorList>
+                                <locator>
+                                    <udpv4>
+                                        <address>172.30.0.13</address> <port>11813</port>
+                                    </udpv4>
+                                </locator>
+                            </metatrafficUnicastLocatorList>
+                        </RemoteServer>
+                    </discoveryServersList>
+                <!-- Discovery lease duration -->
+                <leaseDuration>
+                    <sec>30</sec>
+                    <nanosec>0</nanosec>
+                </leaseDuration>
+               
+                <!-- Discovery announcement period -->
+                <leaseAnnouncement>
+                    <sec>10</sec>
+                    <nanosec>0</nanosec>
+                </leaseAnnouncement>
+                </discovery_config>
+            </builtin>
+           
+            <!-- Use builtin transports -->
+            <useBuiltinTransports>true</useBuiltinTransports>
+        </rtps>
+            <!-- Properties -->
+            <properties>
+                <property>
+                    <name>fastdds.application.id</name>
+                    <value>ISTANBUL_CLIENT</value>
+                </property>
+                <property>
+                    <name>fastdds.application.metadata</name>
+                    <value>Istanbul subnet client</value>
+                </property>
+            </properties>
+    </participant>
+
+</profiles>
+
+
+# fastdds-client-ankara.xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+   
+    <!-- Ankara Client Profili -->
+    <participant profile_name="ankara_client_profile" is_default_profile="true">
+        <rtps>
+            <!-- Participant ID -->
+            <participantID>2</participantID>
+           
+            <!-- Built-in Discovery Protocol ayarları -->
+            <builtin>
+                <discovery_config>
+                    <discoveryProtocol>CLIENT</discoveryProtocol>
+              <discoveryServersList>
+                        <RemoteServer prefix="44.53.00.5f.45.50.52.4f.53.49.4d.41">
+                            <metatrafficUnicastLocatorList>
+                                <locator>
+                                    <udpv4>
+                                        <address>172.30.0.11</address> <port>11811</port>
+                                    </udpv4>
+                                </locator>
+                            </metatrafficUnicastLocatorList>
+                        </RemoteServer>
+                       
+                        <RemoteServer prefix="44.53.01.5f.45.50.52.4f.53.49.4d.41">
+                            <metatrafficUnicastLocatorList>
+                                <locator>
+                                    <udpv4>
+                                        <address>172.30.0.12</address> <port>11812</port>
+                                    </udpv4>
+                                </locator>
+                            </metatrafficUnicastLocatorList>
+                        </RemoteServer>
+                       
+                        <RemoteServer prefix="44.53.02.5f.45.50.52.4f.53.49.4d.41">
+                            <metatrafficUnicastLocatorList>
+                                <locator>
+                                    <udpv4>
+                                        <address>172.30.0.13</address> <port>11813</port>
+                                    </udpv4>
+                                </locator>
+                            </metatrafficUnicastLocatorList>
+                        </RemoteServer>
+                    </discoveryServersList>
+                                   
+                <!-- Discovery lease duration -->
+                <leaseDuration>
+                    <sec>30</sec>
+                    <nanosec>0</nanosec>
+                </leaseDuration>
+               
+                <!-- Discovery announcement period -->
+                <leaseAnnouncement>
+                    <sec>10</sec>
+                    <nanosec>0</nanosec>
+                </leaseAnnouncement>
+                </discovery_config>
+            </builtin>
+           
+            <!-- Use builtin transports -->
+            <useBuiltinTransports>true</useBuiltinTransports>
+        </rtps>
+            <properties>
+                <property>
+                    <name>fastdds.application.id</name>
+                    <value>ANKARA_CLIENT</value>
+                </property>
+                <property>
+                    <name>fastdds.application.metadata</name>
+                    <value>Ankara subnet client</value>
+                </property>
+            </properties>
+    </participant>
+   
+</profiles>
+
+
+# Dockerfile_fastdds_discovery
+FROM ros:humble-ros-base-jammy
+
+# FastDDS ve Discovery Server araçlarını yükle
+RUN apt-get update && apt-get install -y \
+    libfastrtps-dev \
+    fastdds-tools \
+    ros-humble-demo-nodes-cpp \
+    ros-humble-rmw-fastrtps-cpp \
+    net-tools \
+    iputils-ping \
+    iproute2 \
+    curl \
+    wget \
+    vim \
+    build-essential \
+    cmake \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# ROS2 ortamını yükle
+RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+
+# Çalışma dizinini ayarla
+WORKDIR /discovery_server
+
+# Konfigürasyon dizinini oluştur
+RUN mkdir -p /config
+
+# Discovery Server için script dizinini oluştur
+RUN mkdir -p /scripts
+
+# Port ve server ID için environment variables
+ENV FASTDDS_SERVER_ID=0
+ENV FASTDDS_SERVER_PORT=11811
+
+# Entry point
+COPY docker-entrypoint-discovery.sh /
+RUN chmod +x /docker-entrypoint-discovery.sh
+
+ENTRYPOINT ["/docker-entrypoint-discovery.sh"]
+CMD ["bash"]
+
+
+# docker-compose.yml
+version: '3.8'
+
+services:
+  discovery_server_istanbul:
+    build:
+      context: .
+      dockerfile: Dockerfile_fastdds_discovery
+    container_name: discovery_server_istanbul
+    networks:
+      istanbul_net:  # Mevcut macvlan ağı
+      common_net:
+        ipv4_address: 172.30.0.11
+    environment:
+      - FASTDDS_SERVER_ID=0
+      - FASTDDS_SERVER_PORT=11811
+    ports:
+      - "11811:11811"
+    volumes:
+      - ./fastdds-discovery-istanbul.xml:/config/fastdds-discovery.xml:ro
+      - ./scripts/start_discovery_server.sh:/start_discovery_server.sh:ro
+    command: ["/start_discovery_server.sh"]
+
+  # FastDDS Discovery Server - Ankara
+  discovery_server_ankara:
+    build:
+      context: .
+      dockerfile: Dockerfile_fastdds_discovery
+    container_name: discovery_server_ankara
+    networks:
+      ankara_net: # Mevcut macvlan ağı
+      common_net:
+        ipv4_address: 172.30.0.12
+    environment:
+      - FASTDDS_SERVER_ID=1
+      - FASTDDS_SERVER_PORT=11812
+    ports:
+      - "11812:11812"
+    volumes:
+      - ./fastdds-discovery-ankara.xml:/config/fastdds-discovery.xml:ro
+      - ./scripts/start_discovery_server.sh:/start_discovery_server.sh:ro
+    command: ["/start_discovery_server.sh"]
+
+  # FastDDS Discovery Server - İzmir
+  discovery_server_izmir:
+    build:
+      context: .
+      dockerfile: Dockerfile_fastdds_discovery
+    container_name: discovery_server_izmir
+    networks:
+      izmir_net: # Mevcut macvlan ağı
+      common_net:
+        ipv4_address: 172.30.0.13
+    environment:
+      - FASTDDS_SERVER_ID=2
+      - FASTDDS_SERVER_PORT=11813
+    ports:
+      - "11813:11813"
+    volumes:
+      - ./fastdds-discovery-izmir.xml:/config/fastdds-discovery.xml:ro
+      - ./scripts/start_discovery_server.sh:/start_discovery_server.sh:ro
+    command: ["/start_discovery_server.sh"]
+
+  # İstanbul ROS2 Düğümleri - FastDDS
+  ist_talker_1:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ist_talker_1
+    depends_on: 
+      - discovery_server_istanbul
+    networks: 
+      - istanbul_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-istanbul.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-istanbul.xml:/config/fastdds-client-istanbul.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_istanbul_1"]
+
+  ist_talker_2:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ist_talker_2
+    depends_on: 
+      - discovery_server_istanbul
+    networks: 
+      - istanbul_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-istanbul.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-istanbul.xml:/config/fastdds-client-istanbul.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_istanbul_2"]
+
+  ist_listener_1:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ist_listener_1
+    depends_on: 
+      - discovery_server_istanbul
+    networks: 
+      - istanbul_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-istanbul.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-istanbul.xml:/config/fastdds-client-istanbul.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "listener", "--ros-args", "-r", "__node:=listener_istanbul_1"]
+
+  # Ankara ROS2 Düğümleri - FastDDS
+  ankr_talker_1:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ankr_talker_1
+    depends_on: 
+      - discovery_server_ankara
+    networks: 
+      - ankara_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-ankara.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-ankara.xml:/config/fastdds-client-ankara.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_ankara_1"]
+
+  ankr_talker_2:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ankr_talker_2
+    depends_on: 
+      - discovery_server_ankara
+    networks: 
+      - ankara_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-ankara.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-ankara.xml:/config/fastdds-client-ankara.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_ankara_2"]
+
+  ankr_listener_1:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ankr_listener_1
+    depends_on: 
+      - discovery_server_ankara
+    networks: 
+      - ankara_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-ankara.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-ankara.xml:/config/fastdds-client-ankara.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "listener", "--ros-args", "-r", "__node:=listener_ankara_1"]
+
+  # İzmir ROS2 Düğümleri - FastDDS
+  izm_talker_1:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: izm_talker_1
+    depends_on: 
+      - discovery_server_izmir
+    networks: 
+      - izmir_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-izmir.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-izmir.xml:/config/fastdds-client-izmir.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_izmir_1"]
+
+  izm_talker_2:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: izm_talker_2
+    depends_on: 
+      - discovery_server_izmir
+    networks: 
+      - izmir_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-izmir.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-izmir.xml:/config/fastdds-client-izmir.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "talker", "--ros-args", "-r", "__node:=talker_izmir_2"]
+
+  izm_listener_1:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: izm_listener_1
+    depends_on: 
+      - discovery_server_izmir
+    networks: 
+      - izmir_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-izmir.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-izmir.xml:/config/fastdds-client-izmir.xml:ro
+    command: ["ros2", "run", "demo_nodes_cpp", "listener", "--ros-args", "-r", "__node:=listener_izmir_1"]
+
+  # Monitoring ve Debug için Terminal Erişimi
+  ist_terminal:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ist_terminal
+    depends_on: 
+      - discovery_server_istanbul
+    networks: 
+      - istanbul_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-istanbul.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-istanbul.xml:/config/fastdds-client-istanbul.xml:ro
+    stdin_open: true
+    tty: true
+    command: ["sleep", "infinity"]
+
+  ankr_terminal:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: ankr_terminal
+    depends_on: 
+      - discovery_server_ankara
+    networks: 
+      - ankara_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-ankara.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-ankara.xml:/config/fastdds-client-ankara.xml:ro
+    stdin_open: true
+    tty: true
+    command: ["sleep", "infinity"]
+
+  izm_terminal:
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_fastdds
+    container_name: izm_terminal
+    depends_on: 
+      - discovery_server_izmir
+    networks: 
+      - izmir_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-client-izmir.xml
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - ./fastdds-client-izmir.xml:/config/fastdds-client-izmir.xml:ro
+    stdin_open: true
+    tty: true
+    command: ["sleep", "infinity"]
+
+networks:
+  istanbul_net:
+    driver: macvlan
+    driver_opts:
+      parent: eth0.40
+    ipam:
+      config:
+        - subnet: 192.168.111.0/24
+          gateway: 192.168.111.1
+
+  ankara_net:
+    driver: macvlan
+    driver_opts:
+      parent: eth0.50
+    ipam:
+      config:
+        - subnet: 192.168.112.0/24
+          gateway: 192.168.112.1
+
+  izmir_net:
+    driver: macvlan
+    driver_opts:
+      parent: eth0.60
+    ipam:
+      config:
+        - subnet: 192.168.113.0/24
+          gateway: 192.168.113.1
+
+  common_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+          gateway: 172.30.0.1
+
+
+# Dockerfile_ros2_fastdds
+FROM ros:humble-ros-base-jammy
+
+# FastDDS ve gerekli paketleri yükle
+RUN apt-get update && apt-get install -y \
+    ros-humble-rmw-fastrtps-cpp \
+    ros-humble-demo-nodes-cpp \
+    ros-humble-demo-nodes-py \
+    ros-humble-rqt* \
+    ros-humble-ros2bag \
+    ros-humble-rosbag2* \
+    python3-pip \
+    net-tools \
+    iputils-ping \
+    iproute2 \
+    curl \
+    wget \
+    vim \
+    htop \
+    && rm -rf /var/lib/apt/lists/*
+
+# FastDDS araçlarını yükle
+RUN apt-get update && apt-get install -y \
+    libfastrtps-dev \
+    fastdds-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+# ROS2 ortamını yükle
+RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+
+# Çalışma dizinini ayarla
+WORKDIR /ros2_ws
+
+# Konfigürasyon dizinini oluştur
+RUN mkdir -p /config
+
+# FastDDS default RMW olarak ayarla
+ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+
+# Entry point
+COPY docker-entrypoint.sh /
+RUN chmod +x /docker-entrypoint.sh
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["bash"]
+
+
+# docker-entrypoint-discovery.sh
+#!/bin/bash
+set -e
+
+# ROS2 ortamını yükle
+source /opt/ros/humble/setup.bash
+
+# Network bilgilerini göster
+echo "Discovery Server Network Information:"
+ip addr show
+echo "Container hostname: $(hostname)"
+echo "Container IP addresses:"
+hostname -I
+
+# FastDDS Discovery Server parametrelerini göster
+echo "FastDDS Discovery Server Configuration:"
+echo "Server ID: $FASTDDS_SERVER_ID"  
+echo "Server Port: $FASTDDS_SERVER_PORT"
+
+# Discovery Server IP'lerini göster
+echo "Discovery Server IPs:"
+echo "Istanbul: 172.30.0.2"
+echo "Ankara: 192.168.112.2" 
+echo "Izmir: 172.30.0.3"
+
+# Konfigürasyon dosyasını kontrol et
+if [ -f "/config/fastdds-discovery.xml" ]; then
+    echo "Using configuration file: /config/fastdds-discovery.xml"
+    export FASTRTPS_DEFAULT_PROFILES_FILE=/config/fastdds-discovery.xml
+else
+    echo "Warning: No configuration file found, using default settings"
+fi
+
+# Fast-discovery-server aracının var olup olmadığını kontrol et
+if command -v fast-discovery-server &> /dev/null; then
+    echo "fast-discovery-server tool found!"
+    
+    # Eğer discovery server başlatma komutu verilmişse
+    if [[ "$1" == "start-discovery" ]]; then
+        echo "Starting FastDDS Discovery Server..."
+        echo "Server ID: $FASTDDS_SERVER_ID"
+        echo "Server Port: $FASTDDS_SERVER_PORT"
+        
+        # Doğru parametrelerle discovery server'ı başlat
+        exec fast-discovery-server -i $FASTDDS_SERVER_ID -p $FASTDDS_SERVER_PORT
+    fi
+else
+    echo "fast-discovery-server tool not found!"
+    echo "Checking alternative commands..."
+    
+    # Alternatif komutları dene
+    if command -v fastdds &> /dev/null; then
+        echo "fastdds command found, trying discovery server..."
+        if [[ "$1" == "start-discovery" ]]; then
+            # FastDDS discovery server komutunu doğru parametrelerle çalıştır
+            exec fastdds discovery -i $FASTDDS_SERVER_ID -p $FASTDDS_SERVER_PORT
+        fi
+    else
+        echo "No FastDDS discovery server tools found!"
+        echo "Available commands:"
+        ls -la /usr/bin/ | grep -i fast || echo "No fast commands found"
+        ls -la /usr/local/bin/ | grep -i fast || echo "No fast commands in /usr/local/bin"
+    fi
+fi
+
+# Verilen komutu çalıştır
+exec "$@"
+
+
+# docker-entrypoint.sh
+#!/bin/bash
+set -e
+
+# ROS2 ortamını yükle
+source /opt/ros/humble/setup.bash
+
+# FastDDS konfigürasyonunu kontrol et
+if [ -n "$FASTRTPS_DEFAULT_PROFILES_FILE" ]; then
+    echo "FastDDS configuration file: $FASTRTPS_DEFAULT_PROFILES_FILE"
+    if [ -f "$FASTRTPS_DEFAULT_PROFILES_FILE" ]; then
+        echo "Configuration file exists and is accessible"
+    else
+        echo "Warning: Configuration file not found or not accessible"
+    fi
+fi
+
+# RMW implementation kontrolü
+echo "RMW Implementation: $RMW_IMPLEMENTATION"
+
+# Network bilgilerini göster
+echo "Network Interface Information:"
+ip addr show
+
+echo "Container hostname: $(hostname)"
+echo "Container IP addresses:"
+hostname -I
+
+# Verilen komutu çalıştır
+exec "$@"

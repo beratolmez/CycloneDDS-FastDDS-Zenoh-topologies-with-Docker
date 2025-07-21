@@ -1,0 +1,374 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------------------------
+  # 1. İstanbul Bölgesi – DDS / ROS2 Düğümleri
+  # -------------------------------------------------------------------------
+  ist_talker_1:
+    image: ros:humble-ros-base-jammy
+    container_name: ist_talker_1
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_cyclonedds
+    networks:
+      - istanbul_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///config/cyclonedds-istanbul.xml
+      - ROS_DOMAIN_ID=0
+      - CYCLONEDDS_DOMAIN_TAG=istanbul
+    volumes:
+      - ./cyclonedds-istanbul.xml:/config/cyclonedds-istanbul.xml:ro
+    command:
+      - ros2
+      - run
+      - demo_nodes_cpp
+      - talker
+      - --ros-args
+      - -r
+      - "__node:=talker_istanbul_1"
+
+  ist_talker_2:
+    image: ros:humble-ros-base-jammy
+    container_name: ist_talker_2
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_cyclonedds
+    networks:
+      - istanbul_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///config/cyclonedds-istanbul.xml
+      - ROS_DOMAIN_ID=0
+      - CYCLONEDDS_DOMAIN_TAG=istanbul
+    volumes:
+      - ./cyclonedds-istanbul.xml:/config/cyclonedds-istanbul.xml:ro
+    command:
+      - ros2
+      - run
+      - demo_nodes_cpp
+      - talker
+      - --ros-args
+      - -r
+      - "__node:=talker_istanbul_2"
+
+  ist_listener_1:
+    image: ros:humble-ros-base-jammy
+    container_name: ist_listener_1
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_cyclonedds
+    networks:
+      - istanbul_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///config/cyclonedds-istanbul.xml
+      - ROS_DOMAIN_ID=0
+      - CYCLONEDDS_DOMAIN_TAG=istanbul
+    volumes:
+      - ./cyclonedds-istanbul.xml:/config/cyclonedds-istanbul.xml:ro
+    command:
+      - ros2
+      - run
+      - demo_nodes_cpp
+      - listener
+      - --ros-args
+      - -r
+      - "__node:=listener_istanbul_1"
+
+  ist_terminal:
+    image: ros:humble-ros-base-jammy
+    container_name: ist_terminal
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_cyclonedds
+    networks:
+      - istanbul_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///config/cyclonedds-istanbul.xml
+      - ROS_DOMAIN_ID=0
+      - CYCLONEDDS_DOMAIN_TAG=istanbul
+    volumes:
+      - ./cyclonedds-istanbul.xml:/config/cyclonedds-istanbul.xml:ro
+    stdin_open: true
+    tty: true
+    command:
+      - sleep
+      - infinity
+
+  # -------------------------------------------------------------------------
+  # 2. Ankara Bölgesi – DDS / ROS2 Düğümleri
+  # -------------------------------------------------------------------------
+  ankr_talker_1:
+    image: ros:humble-ros-base-jammy
+    container_name: ankr_talker_1
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_cyclonedds
+    networks:
+      - ankara_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///config/cyclonedds-ankara.xml
+      - ROS_DOMAIN_ID=0
+      - CYCLONEDDS_DOMAIN_TAG=ankara
+    volumes:
+      - ./cyclonedds-ankara.xml:/config/cyclonedds-ankara.xml:ro
+    command:
+      - ros2
+      - run
+      - demo_nodes_cpp
+      - talker
+      - --ros-args
+      - -r
+      - "__node:=talker_ankara_1"
+
+  ankr_talker_2:
+    image: ros:humble-ros-base-jammy
+    container_name: ankr_talker_2
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_cyclonedds
+    networks:
+      - ankara_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///config/cyclonedds-ankara.xml
+      - ROS_DOMAIN_ID=0
+      - CYCLONEDDS_DOMAIN_TAG=ankara
+    volumes:
+      - ./cyclonedds-ankara.xml:/config/cyclonedds-ankara.xml:ro
+    command:
+      - ros2
+      - run
+      - demo_nodes_cpp
+      - talker
+      - --ros-args
+      - -r
+      - "__node:=talker_ankara_2"
+
+  ankr_listener_1:
+    image: ros:humble-ros-base-jammy
+    container_name: ankr_listener_1
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_cyclonedds
+    networks:
+      - ankara_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///config/cyclonedds-ankara.xml
+      - ROS_DOMAIN_ID=0
+      - CYCLONEDDS_DOMAIN_TAG=ankara
+    volumes:
+      - ./cyclonedds-ankara.xml:/config/cyclonedds-ankara.xml:ro
+    command:
+      - ros2
+      - run
+      - demo_nodes_cpp
+      - listener
+      - --ros-args
+      - -r
+      - "__node:=listener_ankara_1"
+
+  ankr_terminal:
+    image: ros:humble-ros-base-jammy
+    container_name: ankr_terminal
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_cyclonedds
+    networks:
+      - ankara_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///config/cyclonedds-ankara.xml
+      - ROS_DOMAIN_ID=0
+      - CYCLONEDDS_DOMAIN_TAG=ankara
+    volumes:
+      - ./cyclonedds-ankara.xml:/config/cyclonedds-ankara.xml:ro
+    stdin_open: true
+    tty: true
+    command:
+      - sleep
+      - infinity
+
+  # -------------------------------------------------------------------------
+  # 3. İzmir Bölgesi – DDS / ROS2 Düğümleri
+  # -------------------------------------------------------------------------
+  izm_talker_1:
+    image: ros:humble-ros-base-jammy
+    container_name: izm_talker_1
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_cyclonedds
+    networks:
+      - izmir_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///config/cyclonedds-izmir.xml
+      - ROS_DOMAIN_ID=0
+      - CYCLONEDDS_DOMAIN_TAG=izmir
+    volumes:
+      - ./cyclonedds-izmir.xml:/config/cyclonedds-izmir.xml:ro
+    command:
+      - ros2
+      - run
+      - demo_nodes_cpp
+      - talker
+      - --ros-args
+      - -r
+      - "__node:=talker_izmir_1"
+
+  izm_talker_2:
+    image: ros:humble-ros-base-jammy
+    container_name: izm_talker_2
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_cyclonedds
+    networks:
+      - izmir_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///config/cyclonedds-izmir.xml
+      - ROS_DOMAIN_ID=0
+      - CYCLONEDDS_DOMAIN_TAG=izmir
+    volumes:
+      - ./cyclonedds-izmir.xml:/config/cyclonedds-izmir.xml:ro
+    command:
+      - ros2
+      - run
+      - demo_nodes_cpp
+      - talker
+      - --ros-args
+      - -r
+      - "__node:=talker_izmir_2"
+
+  izm_listener_1:
+    image: ros:humble-ros-base-jammy
+    container_name: izm_listener_1
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_cyclonedds
+    networks:
+      - izmir_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///config/cyclonedds-izmir.xml
+      - ROS_DOMAIN_ID=0
+      - CYCLONEDDS_DOMAIN_TAG=izmir
+    volumes:
+      - ./cyclonedds-izmir.xml:/config/cyclonedds-izmir.xml:ro
+    command:
+      - ros2
+      - run
+      - demo_nodes_cpp
+      - listener
+      - --ros-args
+      - -r
+      - "__node:=listener_izmir_1"
+
+  izm_terminal:
+    image: ros:humble-ros-base-jammy
+    container_name: izm_terminal
+    build:
+      context: .
+      dockerfile: Dockerfile_ros2_cyclonedds
+    networks:
+      - izmir_net
+      - common_net
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///config/cyclonedds-izmir.xml
+      - ROS_DOMAIN_ID=0
+      - CYCLONEDDS_DOMAIN_TAG=izmir
+    volumes:
+      - ./cyclonedds-izmir.xml:/config/cyclonedds-izmir.xml:ro
+    stdin_open: true
+    tty: true
+    command:
+      - sleep
+      - infinity
+
+  # -------------------------------------------------------------------------
+  # 4. Workstation – Operatör PC’si (HMI) – Ortak Fabrika Ağı
+  # -------------------------------------------------------------------------
+  workstation:
+    build:
+      context: .
+      dockerfile: Dockerfile.workstation
+    container_name: workstation
+    networks:
+      - common_net
+    stdin_open: true
+    tty: true
+    ports:
+      - "2222:22"      # Host → Workstation SSH
+    restart: unless-stopped
+    
+  ros_pentest:
+    build:
+      context: .
+      dockerfile: Dockerfile.ros_pentest_minimal
+    image: ros_pentest_image
+    container_name: ros_pentest_container_minimal
+    tty: true
+    stdin_open: true
+    networks:
+      - istanbul_net
+      - common_net
+    volumes:
+      - ./shared_data:/root/shared_data
+      
+      
+
+networks:
+  # İstanbul Bölgesi (macvlan)
+  istanbul_net:
+    driver: macvlan
+    driver_opts:
+      parent: eth0.40
+    ipam:
+      config:
+        - subnet: 192.168.111.0/24
+          gateway: 192.168.111.1
+
+  # Ankara Bölgesi (macvlan)
+  ankara_net:
+    driver: macvlan
+    driver_opts:
+      parent: eth0.50
+    ipam:
+      config:
+        - subnet: 192.168.112.0/24
+          gateway: 192.168.112.1
+
+  # İzmir Bölgesi (macvlan)
+  izmir_net:
+    driver: macvlan
+    driver_opts:
+      parent: eth0.60
+    ipam:
+      config:
+        - subnet: 192.168.113.0/24
+          gateway: 192.168.113.1
+
+  # Ortak Fabrika Ağı (bridge)
+  common_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+          gateway: 172.30.0.1
+

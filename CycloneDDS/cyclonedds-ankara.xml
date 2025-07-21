@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CycloneDDS xmlns="https://cyclonedds.io/ns/config"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="https://cyclonedds.io/ns/config https://raw.githubusercontent.com/eclipse-cyclonedx/cyclonedx/master/etc/cyclonedx.xsd">
+
+    <Domain id="0">
+        <General>
+            <AllowMulticast>true</AllowMulticast> 
+            <MaxMessageSize>65536B</MaxMessageSize> 
+        </General>
+
+        <Discovery>
+            <Peers>
+                <Peer address="192.168.111.254"/>
+                <Peer address="192.168.113.254"/>
+            </Peers>
+        </Discovery>
+
+        <Tracing>
+            <Verbosity>config</Verbosity>
+            <OutputFile>stdout</OutputFile>
+        </Tracing>
+    </Domain>
+</CycloneDDS>

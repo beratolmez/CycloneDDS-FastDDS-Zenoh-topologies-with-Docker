@@ -1,0 +1,40 @@
+# Dockerfile_ros2_cyclonedds
+FROM ros:humble-ros-base-jammy
+
+# CycloneDDS ve gerekli paketleri yükle
+RUN apt-get update && apt-get install -y \
+    ros-humble-rmw-cyclonedds-cpp \
+    ros-humble-cyclonedds \
+    ros-humble-demo-nodes-cpp \
+    ros-humble-demo-nodes-py \
+    ros-humble-rqt* \
+    ros-humble-ros2bag \
+    ros-humble-rosbag2* \
+    python3-pip \
+    net-tools \
+    iputils-ping \
+    iproute2 \
+    curl \
+    wget \
+    vim \
+    htop \
+    && rm -rf /var/lib/apt/lists/*
+
+# ROS2 ortamını yükle
+RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+
+# Çalışma dizinini ayarla
+WORKDIR /ros2_ws
+
+# Konfigürasyon dizinini oluştur
+RUN mkdir -p /config
+
+# CycloneDDS default RMW olarak ayarla
+ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+
+# Entry point
+COPY docker-entrypoint-cyclonedds.sh /
+RUN chmod +x /docker-entrypoint-cyclonedds.sh
+
+ENTRYPOINT ["/docker-entrypoint-cyclonedds.sh"]
+CMD ["bash"]

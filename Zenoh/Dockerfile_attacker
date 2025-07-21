@@ -1,0 +1,49 @@
+# Base imaj olarak ROS Humble kullanıyoruz, bu sayede hem Linux araçları hem de ROS2 elinizin altında.
+FROM ros:humble-ros-base-jammy
+LABEL maintainer="senin_adresin@example.com"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=Europe/Istanbul
+
+# --- Paket Kurulumları ---
+# Temel ağ ve sızma testi araçlarını kuruyoruz.
+# tcpreplay: Ağ trafiğini yeniden oynatmak için (Replay Attack).
+# unzip: Zenoh binary'lerini açmak için.
+# python3-venv: Python sanal ortamları için iyi bir pratik.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl wget unzip git sudo \
+    net-tools iputils-ping iproute2 vim htop \
+    nmap tcpdump tshark arp-scan dsniff ettercap-text-only hping3 tcpreplay \
+    ros-humble-rmw-fastrtps-cpp ros-humble-demo-nodes-cpp ros-humble-demo-nodes-py \
+    python3-pip python3-setuptools python3-venv \
+ && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# --- Zenoh CLI Araçlarının Kurulumu ---
+# Saldırganın Zenoh ağıyla doğrudan etkileşime girmesi için kritik öneme sahip.
+# zenoh-ls, z_sub, z_put gibi komutları sağlar.
+ARG ZENOH_VERSION=1.4.0
+RUN wget https://download.eclipse.org/zenoh/zenoh/latest/zenoh-${ZENOH_VERSION}-x86_64-unknown-linux-gnu-standalone.zip \
+     -O /tmp/zenoh.zip && \
+    unzip /tmp/zenoh.zip -d /usr/local/bin/ && \
+    rm /tmp/zenoh.zip && \
+    chmod +x /usr/local/bin/*
+
+
+# --- Python Paketleri ---
+# scapy: Paket oluşturma ve manipülasyonu için en güçlü araç.
+# pandas, matplotlib: Test sonuçlarını analiz etmek ve görselleştirmek için.
+# pyshark: Tshark'ı Python içinde kullanmak için.
+RUN pip3 install --no-cache-dir scapy pandas matplotlib pyshark
+
+# --- Kullanıcı ve Çalışma Dizini ---
+# privileged modda çalışacağı için root kullanmak, birçok ağ aracının
+# sudo olmadan çalışmasını sağlayarak script yazımını kolaylaştırır.
+USER root
+
+# Çalışma dizinini ve kopyalamayı düzeltelim
+WORKDIR /home/ros/attacker-scripts
+COPY attacker-scripts/ .
+
+# Script’lere çalıştırma izni ver (Aşağıdakilerden birini seçin)
+# Seçenek A: bash+nullglob
+RUN bash -c "shopt -s nullglob && chmod +x ./*.sh ./*.py"
